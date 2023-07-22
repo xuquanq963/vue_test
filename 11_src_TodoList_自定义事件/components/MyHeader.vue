@@ -8,7 +8,6 @@
 import {nanoid} from 'nanoid'
 export default {
     name:'MyHeader',
-    props:['addTodo'],
     methods:{
       add(e){
         //校验数据
@@ -16,7 +15,8 @@ export default {
         //将用户的输入包装成为一个todo对象
         const todoObj = {id:nanoid(),title:e.target.value,done:false};
         //通知app组件去添加一个todo对象
-        this.addTodo(todoObj);
+        // this.addTodo("todoObj")
+        this.$emit("addTodo",todoObj,1,2,3);
         // 清空输入
         e.target.value = ''
       }

@@ -144,3 +144,120 @@
     （2）LocalStorage存储的内容，需要手动清除才会消失
     （3）xxxxxxStorage.getItem(xxx)如果xxx对应的value获取不到，那么getItem的返回值是null
     （4）JSON.parse(null)的结果依然是null
+
+## 组件的自定义事件
+1、一种组件间通信的方式，适用于：子组件===>父组件
+2、使用场景：A是父组件，B是子组件，B想给A传数据，那么就要在A中给B绑定自定义事件（事件的回调在A中）。
+3、绑定自定义事件：
+    （1）第一种方式，在父组件中<Demo @guigu="test"/>或<Demo v-on:atguigu="test"/>
+    （2）第二种方式，在父组件中:
+        <Demo ref="demo"/>
+        ......
+        mounted(){
+            this.$refs.xxx.$on('atguigu',this.test)
+        }
+    （3）若想让自定义事件只能触发一次，可以使用once修饰符，或$once方法
+4、触发自定义事件：this.$emit('atguigu',数据)
+5、解绑自定义事件：this.$off('atguigu')
+6、组件上也可以绑定原生DOM事件，需要使用native修饰符。
+7、注意：通过this.$refs.xxx.$on('atguigu',回调)绑定自定义事件时，回调要么配置在methods中，要么用箭头函数，否则this指向会出问题！
+
+
+## 全局事件总线（GlobalEventBus）
+1、一种组件间通信的方式，适用于任意组件间通信
+2、安装全局事件总线：
+    new Vue({
+        ......
+        beforeCreate(){
+            Vue.prototype.$bus = this   //安装全局事件总线，$bus就是当前应用的vm
+        },
+        ......
+    })
+3、使用事件总线：
+    （1）接收数据：A组件想接收数据，则在A组件中给$bus绑定自定义事件，事件的回调留在A组件自身
+    methods:{
+        demo(data){......}
+    }
+    ......
+    mounted(){
+        this.$bus.$on('xxx',this.demo)
+    }
+    （2）提供数据：this.$bus.$emit('xxx',数据)
+4、最好在beforeDestroy钩子中，用$off去解绑当前组件所用的事件。
+
+## 消息订阅与发布（pubsub）
+1、一种组件间通信的方式，适用于任意组件间通信
+2、使用步骤：
+    （1）安装pubsub: npm i pubsub-js
+    （2）引入:import pubsub from 'pubsub-js'
+    （3）接收数据：A组件想接收数据，则在A组件中订阅消息，订阅的回调留在A组件自身。
+        methods:{
+            demo(msg,data){...}
+        },
+        mounted{
+            this.pId = pubsub.subscribe("xxx",this.demo)   //订阅消息
+        }
+    （4）提供数据：pubsub.publish('xxx',数据)
+    （5）最好在beforeDestroy钩子中，用pubsub.unsubscribe(pId) 去取消订阅
+
+## Vue封装的过度与动画
+1、作用：在插入、更新或移除DOM元素时，在合适的时候给元素添加样式类名
+2、图示：
+3、写法：
+    （1）准备好样式：
+
+        元素进入的样式：
+            1.v-enter: 进入的起点
+            2.v-enter-active：进入过程中
+            3.v-enter-to:进入的终点
+        元素离开的样式：
+            1.v-leave: 离开的起点
+            2.v-leave-active：离开过程中
+            3.v-leave-to:；离开的终点
+    （2）使用<transition>包裹要过度的元素，并配置name属性：
+        <transition name="hello">
+            <h1 v-show="isShow"></h1>
+        </transition>
+    （3）备注：若有多个元素需要过度，则需要使用：<transition-group>，且每个元素都要指定key值
+
+## Vue脚手架配置代理
+方法一
+    在Vue.config.js中添加如下配置：
+        devServer:{
+            proxy:'http://localhost:5000'
+        }
+    说明：
+        1、优点：配置简单，请求资源时直接发给前端（8080）即可
+        2、缺点：不能配置多个代理，不能灵活的控制请求是否走代理
+        3、工作方式：若按照上述配置代理，当请求了前端不存在的资源，那么该请求会转发给服务器（优先匹配前端资源）
+
+方法二
+     编写vue.config.js配置具体代理规则
+        module.exports = {
+            devServer:{
+                proxy: {
+                    '/api1':{                               //匹配所有以'api'开头的请求路径
+                        target: 'http://localhost:5000',    //代理目标的基础路径
+                        pathRewrite:{'^/api1':''},
+                        ws: true,                           //用于支持Websocket
+                        changeOrigin: true,                 //用于控制请求头中的host值
+                    },
+                    '/api2':{                               //匹配所有以'api'开头的请求路径
+                        target: 'http://localhost:5001',    //代理目标的基础路径
+                        pathRewrite:{'^/api2':''},
+                        ws: true,                           //用于支持Websocket
+                        changeOrigin: true,                 //用于控制请求头中的host值
+                    },
+                }
+            }
+        }
+
+    changeOrigin设置为true时，服务器收到的请求头中的host为：localhost：5000
+    changeOrigin设置为false时，服务器收到的请求头中的host为：localhost：8080
+    changeOrigin默认值为true
+
+    说明：
+        1、优点：可以配置多个代理，且可以灵活的控制请求是否走代理。
+        2、缺点：配置略为繁琐，请求资源时必须加前缀。
+
+
